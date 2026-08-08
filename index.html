@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.2.0/sha1.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsotp@1.0.6/lib/jsotp.min.js"></script>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -124,37 +126,24 @@
                 </div>
 
                 <div class="space-y-2 pt-2">
-                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Tasks</h3>
-                    <div onclick="openTaskDetails()" class="p-4 rounded-xl bg-cardbg neon-border flex justify-between items-center cursor-pointer hover:border-neonblue transition">
-                        <div class="space-y-0.5">
-                            <span class="text-[10px] text-neonblue font-semibold uppercase">Instagram task 2fa</span>
-                            <h4 class="font-bold text-xs">Create IG Account & Verify</h4>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="font-bold text-neongreen text-sm">0.042$</span>
-                            <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-                        </div>
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Tasks</h3>
+                        <button onclick="loadPlatformTasks()" class="text-[10px] text-neonblue hover:underline"><i class="fa-solid fa-rotate mr-1"></i> Refresh</button>
+                    </div>
+                    <div id="home-active-tasks-container" class="space-y-2">
+                        <p class="text-xs text-gray-500 text-center py-2">Loading tasks...</p>
                     </div>
                 </div>
             </section>
 
             <!-- TAB 2: TASK -->
             <section id="tab-tasks" class="space-y-4 view-section hidden">
-                <h2 class="text-lg font-bold">Tasks</h2>
-                <div class="space-y-3">
-                    <div class="p-4 rounded-2xl bg-cardbg neon-border space-y-3">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <span class="text-[10px] bg-neonblue/10 text-neonblue px-2 py-0.5 rounded-md font-semibold">Instagram task</span>
-                                <h3 class="font-bold text-sm mt-1">Instagram 2FA Task</h3>
-                            </div>
-                            <span class="text-xs font-bold text-neongreen">0.042$</span>
-                        </div>
-                        <p class="text-xs text-gray-400">Create a new Instagram account using the automatically generated credentials and submit your 2FA verification.</p>
-                        <button onclick="openTaskDetails()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-neonblue to-neongreen text-darkbg font-bold text-xs uppercase tracking-wider shadow-lg">
-                            View Task Details
-                        </button>
-                    </div>
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold">Tasks</h2>
+                    <button onclick="loadPlatformTasks()" class="text-xs text-neonblue"><i class="fa-solid fa-rotate mr-1"></i> Refresh</button>
+                </div>
+                <div id="tasks-page-container" class="space-y-3">
+                    <p class="text-xs text-gray-500 text-center py-6">Loading available tasks...</p>
                 </div>
             </section>
 
@@ -187,14 +176,6 @@
                             <span class="text-base font-bold text-neongreen" id="ref-active">0</span>
                         </div>
                     </div>
-                </div>
-
-                <div class="p-4 rounded-2xl bg-cardbg neon-border flex justify-between items-center cursor-pointer hover:border-neonblue transition">
-                    <div>
-                        <h4 class="font-bold text-xs">Leaderboard</h4>
-                        <p class="text-[10px] text-gray-400">View the referral leaderboard</p>
-                    </div>
-                    <i class="fa-solid fa-arrow-right text-neonblue"></i>
                 </div>
             </section>
 
@@ -248,20 +229,6 @@
                         </button>
                     </div>
                 </div>
-
-                <div class="space-y-2">
-                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">My statistics</h3>
-                    <div class="bg-cardbg p-4 rounded-2xl neon-border space-y-2 text-xs">
-                        <div class="flex justify-between">
-                            <span class="text-gray-400">Total Tasks Done</span>
-                            <span class="font-bold text-white" id="stat-total-tasks">0</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-400">Total Referrals</span>
-                            <span class="font-bold text-white" id="stat-total-refs">0</span>
-                        </div>
-                    </div>
-                </div>
             </section>
 
         </main>
@@ -293,22 +260,19 @@
         <div class="bg-cardbg neon-border w-full max-w-sm rounded-3xl p-5 space-y-4 relative max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2">
                 <div class="flex items-center space-x-2">
-                    <span class="font-bold text-sm">Instagram 2FA Task</span>
+                    <span class="font-bold text-sm" id="modal-task-title">Task Details</span>
                 </div>
                 <button onclick="closeTaskModal()" class="text-gray-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
             <div class="p-4 rounded-2xl bg-gradient-to-br from-cardbg to-[#1a1c38] neon-border text-center">
                 <span class="text-[10px] text-gray-400 uppercase tracking-wider block">Reward</span>
-                <span class="text-xl font-black text-neongreen">$ 0.042</span>
+                <span class="text-xl font-black text-neongreen" id="modal-task-reward">$0.00</span>
             </div>
 
-            <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[11px] text-red-300 leading-relaxed space-y-1">
-                <div class="font-bold flex items-center space-x-1">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <span>IMPORTANT:</span>
-                </div>
-                <p>Create the account using these automatically generated credentials. Copy and use them directly.</p>
+            <div class="p-3 rounded-xl bg-cardbg border border-gray-800 text-[11px] text-gray-300 leading-relaxed space-y-1">
+                <div class="font-bold text-neonblue">Instructions:</div>
+                <p id="modal-task-desc">Complete instructions here...</p>
             </div>
 
             <div class="space-y-3">
@@ -366,6 +330,7 @@
             </div>
 
             <form id="task-submission-form" onsubmit="handleTaskSubmit(event)" class="pt-1">
+                <input type="hidden" id="current-task-reward-val" value="0.042">
                 <button type="submit" id="submit-btn" class="w-full py-3 rounded-xl bg-cardbg neon-border text-neonblue font-bold text-xs uppercase tracking-wider hover:bg-neonblue hover:text-darkbg transition shadow-lg">
                     Submit Task
                 </button>
@@ -388,15 +353,15 @@
     <!-- SCRIPT LOGIC -->
     <script>
         const SUPABASE_URL = 'https://uwmzexmzsfhroxznuayo.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3bXpleG16c2Zocm94em51YXlvIiwicm9sZSI6InVub24iLCJpYXQiOjE3ODYxNzg3MTMsImV4cCI6MjEwMTc1NDcxM30.uEWN7J-f6qLkF_nzd8NJ2GhGOTkXfdA0Oibmen20RTs';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3bXpleG16c2Zocm94em51YXlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNzg3MTMsImV4cCI6MjEwMTc1NDcxM30.uEWN7J-f6qLkF_nzd8NJ2GhGOTkXfdA0Oibmen20RTs';
         
         const { createClient } = supabase;
         const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = {
             id: '',
-            name: 'Telegram User',
-            username: '@username',
+            name: '',
+            username: '',
             balance: 0.00,
             lifetime: 0.00,
             pending: 0,
@@ -406,41 +371,99 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Automatically fetch dynamic user details from Telegram WebApp
-            if (window.Telegram && window.Telegram.WebApp) {
-                const tg = window.Telegram.WebApp;
-                tg.ready();
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+
+            const getTgUser = () => {
                 if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                    const tgUser = tg.initDataUnsafe.user;
-                    if (tgUser.id) currentUser.id = tgUser.id.toString();
-                    if (tgUser.first_name) {
-                        currentUser.name = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
-                    }
-                    if (tgUser.username) {
-                        currentUser.username = '@' + tgUser.username;
-                    }
+                    return tg.initDataUnsafe.user;
                 }
+                try {
+                    const searchParams = new URLSearchParams(tg.initData);
+                    const userStr = searchParams.get('user');
+                    return userStr ? JSON.parse(userStr) : null;
+                } catch (e) {
+                    return null;
+                }
+            };
+
+            const user = getTgUser();
+
+            if (user && user.id) {
+                currentUser.id = user.id.toString();
+                currentUser.name = (user.first_name || '') + (user.last_name ? ' ' + user.last_name : '');
+                currentUser.username = user.username ? '@' + user.username : 'No Username';
+            } else {
+                currentUser.id = 'guest_' + Math.floor(Math.random() * 900000);
+                currentUser.name = 'Telegram User';
+                currentUser.username = 'No Username';
             }
 
-            // Fallback if opened outside Telegram (e.g. browser testing)
-            if (!currentUser.id) {
-                currentUser.id = 'guest_' + Math.floor(Math.random() * 1000000);
-            }
-
-            // Bind values to UI elements dynamically
+            // Bind values to UI Elements (Home & Profile)
             document.getElementById('home-username').innerText = currentUser.name;
             document.getElementById('profile-name').innerText = currentUser.name;
             document.getElementById('profile-username').innerText = currentUser.username;
             document.getElementById('profile-uid').innerText = currentUser.id;
             document.getElementById('referral-link').value = `https://t.me/Wwwearn_bot?start=ref_${currentUser.id}`;
             
-            // Set dynamic notification real-time timestamp
             const now = new Date();
             const timeString = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             document.getElementById('notif-time').innerText = timeString;
 
             syncUserData();
+            loadPlatformTasks();
         });
+
+        async function loadPlatformTasks() {
+            const homeContainer = document.getElementById('home-active-tasks-container');
+            const tasksPageContainer = document.getElementById('tasks-page-container');
+            
+            homeContainer.innerHTML = '<p class="text-xs text-gray-500 text-center py-2">Loading tasks...</p>';
+            tasksPageContainer.innerHTML = '<p class="text-xs text-gray-500 text-center py-6">Loading tasks...</p>';
+
+            const { data, error } = await _supabase.from('platform_tasks').select('*').order('id', { ascending: false });
+
+            if (error || !data || data.length === 0) {
+                homeContainer.innerHTML = '<p class="text-xs text-gray-500 text-center py-2">No active tasks available right now.</p>';
+                tasksPageContainer.innerHTML = '<p class="text-xs text-gray-500 text-center py-6">No active tasks available right now.</p>';
+                return;
+            }
+
+            homeContainer.innerHTML = '';
+            tasksPageContainer.innerHTML = '';
+
+            data.forEach(task => {
+                homeContainer.innerHTML += `
+                    <div onclick="openTaskDetails('${task.title.replace(/'/g, "\\'")}', '${task.description.replace(/'/g, "\\'")}', ${task.reward})" class="p-4 rounded-xl bg-cardbg neon-border flex justify-between items-center cursor-pointer hover:border-neonblue transition">
+                        <div class="space-y-0.5">
+                            <span class="text-[10px] text-neonblue font-semibold uppercase">${task.platform}</span>
+                            <h4 class="font-bold text-xs">${task.title}</h4>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-neongreen text-sm">$${task.reward}</span>
+                            <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                        </div>
+                    </div>
+                `;
+
+                tasksPageContainer.innerHTML += `
+                    <div class="p-4 rounded-2xl bg-cardbg neon-border space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[10px] bg-neonblue/10 text-neonblue px-2 py-0.5 rounded-md font-semibold">${task.platform}</span>
+                                <h3 class="font-bold text-sm mt-1">${task.title}</h3>
+                            </div>
+                            <span class="text-xs font-bold text-neongreen">$${task.reward}</span>
+                        </div>
+                        <p class="text-xs text-gray-400">${task.description}</p>
+                        <button onclick="openTaskDetails('${task.title.replace(/'/g, "\\'")}', '${task.description.replace(/'/g, "\\'")}', ${task.reward})" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-neonblue to-neongreen text-darkbg font-bold text-xs uppercase tracking-wider shadow-lg">
+                            View Task Details
+                        </button>
+                    </div>
+                `;
+            });
+        }
 
         function switchTab(tabId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
@@ -460,7 +483,12 @@
             document.getElementById('notif-dropdown').classList.toggle('hidden');
         }
 
-        function openTaskDetails() {
+        function openTaskDetails(title, description, reward) {
+            document.getElementById('modal-task-title').innerText = title;
+            document.getElementById('modal-task-desc').innerText = description;
+            document.getElementById('modal-task-reward').innerText = '$' + reward;
+            document.getElementById('current-task-reward-val').value = reward;
+
             generateRandomCredentials();
             document.getElementById('task-modal').classList.remove('hidden');
         }
@@ -523,6 +551,7 @@
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
             const twoFaInput = document.getElementById('sub-2fa-key').value;
+            const rewardVal = parseFloat(document.getElementById('current-task-reward-val').value) || 0.042;
 
             if (!twoFaInput) {
                 alert('Please provide the 2FA key or generated code before submitting!');
@@ -539,7 +568,7 @@
                 password: document.getElementById('task-assigned-password').innerText,
                 two_fa_key: twoFaInput,
                 status: 'pending',
-                reward: 0.042,
+                reward: rewardVal,
                 created_at: new Date().toISOString()
             };
 
@@ -575,7 +604,7 @@
                     currentUser.rejected = data.filter(i => i.status === 'rejected').length;
                     currentUser.tasksDone = data.length;
 
-                    currentUser.balance = currentUser.approved * 0.042;
+                    currentUser.balance = data.filter(i => i.status === 'approved').reduce((acc, curr) => acc + (parseFloat(curr.reward) || 0.042), 0);
                     currentUser.lifetime = currentUser.balance;
 
                     document.getElementById('home-total-balance').innerText = '$' + currentUser.balance.toFixed(3);
@@ -585,7 +614,6 @@
                     document.getElementById('stat-pending').innerText = currentUser.pending;
                     document.getElementById('stat-approved').innerText = currentUser.approved;
                     document.getElementById('stat-rejected').innerText = currentUser.rejected;
-                    document.getElementById('stat-total-tasks').innerText = currentUser.tasksDone;
                 }
             } catch (e) {
                 console.log('Offline mode');
@@ -607,16 +635,16 @@
 
         function handleWithdraw() {
             const amount = parseFloat(document.getElementById('withdraw-amount').value);
-            if (isNaN(amount) || amount < 0.05) {
+            if (isNaN(amount) || amount.toFixed(2) < 0.05) {
                 alert('Minimum withdraw amount is 0.05$');
                 return;
             }
             if (amount > currentUser.balance) {
                 alert('Insufficient available balance!');
-                return;
+            } else {
+                alert('Withdrawal request submitted successfully!');
+                document.getElementById('withdraw-amount').value = '';
             }
-            alert('Withdrawal request submitted successfully!');
-            document.getElementById('withdraw-amount').value = '';
         }
     </script>
 </body>

@@ -4,13 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Neon Mini App</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
-    <!-- jsOTP library for generating 2FA 6-digit codes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.2.0/sha1.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsotp@1.0.6/lib/jsotp.min.js"></script>
     <script>
@@ -46,7 +42,6 @@
 </head>
 <body class="flex flex-col min-h-screen justify-between select-none">
 
-    <!-- MAIN CONTAINER -->
     <div id="app" class="flex flex-col flex-grow max-w-md mx-auto w-full relative pb-20">
 
         <!-- HEADER -->
@@ -57,7 +52,6 @@
                 </div>
                 <span class="font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neonblue to-neongreen">Wwwearn_bot</span>
             </div>
-            <!-- Notification Icon & Button -->
             <div class="relative">
                 <button onclick="toggleNotifications()" class="w-9 h-9 rounded-full bg-cardbg neon-border flex items-center justify-center text-neonblue hover:scale-105 transition">
                     <i class="fa-regular fa-bell"></i>
@@ -68,18 +62,18 @@
                         <span>Notifications</span>
                         <button onclick="toggleNotifications()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
                     </div>
-                    <div class="space-y-1">
+                    <div class="space-y-1" id="notif-container">
                         <div class="p-2 bg-darkbg rounded-xl border border-gray-800">
-                            <p class="font-bold text-neonblue">New user</p>
-                            <p class="text-[10px] text-gray-400">User started the bot for the first time</p>
-                            <span class="text-[9px] text-gray-500 block mt-1">Aug 8 14:18</span>
+                            <p class="font-bold text-neonblue">System Ready</p>
+                            <p class="text-[10px] text-gray-400">Connected successfully to backend.</p>
+                            <span id="notif-time" class="text-[9px] text-gray-500 block mt-1">Just now</span>
                         </div>
                     </div>
                 </div>
             </div>
         </header>
 
-        <!-- ================= VIEWS (TABS) ================= -->
+        <!-- VIEWS -->
         <main class="flex-grow p-4">
 
             <!-- TAB 1: HOME -->
@@ -272,7 +266,7 @@
 
         </main>
 
-        <!-- BOTTOM NAVIGATION BAR -->
+        <!-- NAVIGATION -->
         <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0f1020]/95 backdrop-blur border-t border-gray-800 flex justify-around items-center h-16 z-40 px-2">
             <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-neonblue" data-target="home">
                 <i class="fa-solid fa-house text-base"></i>
@@ -294,7 +288,7 @@
 
     </div>
 
-    <!-- TASK DETAILS & SUBMISSION MODAL -->
+    <!-- TASK MODAL -->
     <div id="task-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-cardbg neon-border w-full max-w-sm rounded-3xl p-5 space-y-4 relative max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-gray-800 pb-2">
@@ -304,13 +298,11 @@
                 <button onclick="closeTaskModal()" class="text-gray-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
-            <!-- Reward Header Box -->
             <div class="p-4 rounded-2xl bg-gradient-to-br from-cardbg to-[#1a1c38] neon-border text-center">
                 <span class="text-[10px] text-gray-400 uppercase tracking-wider block">Reward</span>
                 <span class="text-xl font-black text-neongreen">$ 0.042</span>
             </div>
 
-            <!-- Warning Box -->
             <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[11px] text-red-300 leading-relaxed space-y-1">
                 <div class="font-bold flex items-center space-x-1">
                     <i class="fa-solid fa-triangle-exclamation"></i>
@@ -319,7 +311,6 @@
                 <p>Create the account using these automatically generated credentials. Copy and use them directly.</p>
             </div>
 
-            <!-- Auto-Generated Assigned Credentials (Read-only with Copy) -->
             <div class="space-y-3">
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-neonblue tracking-wider block text-center">FULL NAME</label>
@@ -346,7 +337,6 @@
                 </div>
             </div>
 
-            <!-- 2FA Verification Form & Get Code Feature -->
             <div class="space-y-3 pt-2 border-t border-gray-800">
                 <div class="space-y-1 text-center">
                     <div class="flex items-center justify-center space-x-1 text-neonblue text-xs font-bold">
@@ -356,12 +346,10 @@
                     <label class="text-[10px] text-gray-400 block tracking-wider">2FA SETUP KEY</label>
                 </div>
                 
-                <!-- Input for 2FA Secret Key -->
                 <div>
                     <input type="text" id="sub-2fa-key" placeholder="Enter your 2fa secret key" class="w-full bg-darkbg neon-border rounded-xl px-3 py-2.5 text-xs text-white text-center outline-none">
                 </div>
 
-                <!-- Get Code Button & Generated Code Box -->
                 <div class="space-y-2">
                     <button type="button" onclick="generate2FACode()" class="w-full py-2.5 rounded-xl bg-neonpurple text-white font-bold text-xs uppercase tracking-wider hover:bg-neonpurple/80 transition shadow-lg">
                         <i class="fa-solid fa-key mr-1"></i> Get Code
@@ -377,7 +365,6 @@
                 </div>
             </div>
 
-            <!-- Submit Task Form -->
             <form id="task-submission-form" onsubmit="handleTaskSubmit(event)" class="pt-1">
                 <button type="submit" id="submit-btn" class="w-full py-3 rounded-xl bg-cardbg neon-border text-neonblue font-bold text-xs uppercase tracking-wider hover:bg-neonblue hover:text-darkbg transition shadow-lg">
                     Submit Task
@@ -386,7 +373,7 @@
         </div>
     </div>
 
-    <!-- SUCCESS SCREEN MODAL -->
+    <!-- SUCCESS MODAL -->
     <div id="success-modal" class="fixed inset-0 bg-darkbg z-50 flex flex-col items-center justify-center p-6 text-center hidden">
         <div class="w-16 h-16 rounded-full bg-neongreen/20 text-neongreen flex items-center justify-center text-3xl mb-4 neon-glow-green">
             <i class="fa-solid fa-check"></i>
@@ -409,7 +396,7 @@
         let currentUser = {
             id: 'tg_' + Math.floor(Math.random() * 900000 + 100000),
             name: 'Telegram User',
-            username: 'user_' + Math.floor(Math.random() * 9000 + 1000),
+            username: '@user_' + Math.floor(Math.random() * 9000 + 1000),
             balance: 0.00,
             lifetime: 0.00,
             pending: 0,
@@ -419,18 +406,29 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
-                const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-                currentUser.id = tgUser.id.toString();
-                currentUser.name = tgUser.first_name || currentUser.name;
-                currentUser.username = tgUser.username ? '@' + tgUser.username : currentUser.username;
+            // Check real Telegram WebApp user details
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                tg.ready();
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    const tgUser = tg.initDataUnsafe.user;
+                    currentUser.id = tgUser.id.toString();
+                    currentUser.name = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
+                    currentUser.username = tgUser.username ? '@' + tgUser.username : '@user_' + tgUser.id;
+                }
             }
 
+            // Bind values to UI elements
             document.getElementById('home-username').innerText = currentUser.name;
             document.getElementById('profile-name').innerText = currentUser.name;
             document.getElementById('profile-username').innerText = currentUser.username;
             document.getElementById('profile-uid').innerText = currentUser.id;
             document.getElementById('referral-link').value = `https://t.me/Wwwearn_bot?start=ref_${currentUser.id}`;
+            
+            // Set dynamic notification real-time timestamp
+            const now = new Date();
+            const timeString = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('notif-time').innerText = timeString;
 
             syncUserData();
         });
@@ -453,7 +451,6 @@
             document.getElementById('notif-dropdown').classList.toggle('hidden');
         }
 
-        // Auto-generate credentials when opening task details
         function openTaskDetails() {
             generateRandomCredentials();
             document.getElementById('task-modal').classList.remove('hidden');
@@ -467,13 +464,9 @@
             const randomLast = lastNames[Math.floor(Math.random() * lastNames.length)];
             const randomNum = Math.floor(Math.random() * 900 + 100);
 
-            const fullName = `${randomFirst} ${randomLast}`;
-            const username = `${randomFirst.toLowerCase()}_${randomLast.toLowerCase()}${randomNum}`;
-            const password = `${randomFirst.toLowerCase()}sec${Math.floor(Math.random() * 9000 + 1000)}@`;
-
-            document.getElementById('task-assigned-name').innerText = fullName;
-            document.getElementById('task-assigned-username').innerText = username;
-            document.getElementById('task-assigned-password').innerText = password;
+            document.getElementById('task-assigned-name').innerText = `${randomFirst} ${randomLast}`;
+            document.getElementById('task-assigned-username').innerText = `${randomFirst.toLowerCase()}_${randomLast.toLowerCase()}${randomNum}`;
+            document.getElementById('task-assigned-password').innerText = `${randomFirst.toLowerCase()}sec${Math.floor(Math.random() * 9000 + 1000)}@`;
         }
 
         function closeTaskModal() {
@@ -490,7 +483,6 @@
             alert('Copied to clipboard: ' + text);
         }
 
-        // Generate 6-digit TOTP code using jsotp library
         function generate2FACode() {
             let secretKey = document.getElementById('sub-2fa-key').value.trim();
             if (!secretKey) {

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Mini App</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
+    <!-- jsOTP library for generating 2FA 6-digit codes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.2.0/sha1.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsotp@1.0.6/lib/jsotp.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0f1020',
+                        cardbg: '#16182e',
+                        neonblue: '#00f2fe',
+                        neongreen: '#4facfe',
+                        neonpurple: '#7f00ff'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f1020;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
+        }
+        .neon-glow-blue { box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); }
+        .neon-glow-green { box-shadow: 0 0 15px rgba(79, 172, 254, 0.3); }
+        .neon-border { border: 1px solid rgba(0, 242, 254, 0.2); }
+        .neon-border:focus { border-color: #00f2fe; box-shadow: 0 0 10px rgba(0, 242, 254, 0.4); }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0f1020; }
+        ::-webkit-scrollbar-thumb { background: #2a2d4d; border-radius: 2px; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen justify-between select-none">
+
+    <!-- MAIN CONTAINER -->
+    <div id="app" class="flex flex-col flex-grow max-w-md mx-auto w-full relative pb-20">
+
+        <!-- HEADER -->
+        <header class="flex justify-between items-center px-5 py-4 border-b border-gray-800 bg-[#0f1020]/80 backdrop-blur sticky top-0 z-40">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-neonblue to-neongreen flex items-center justify-center neon-glow-blue">
+                    <i class="fa-solid fa-bolt text-darkbg font-bold"></i>
+                </div>
+                <span class="font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neonblue to-neongreen">Wwwearn_bot</span>
+            </div>
+            <!-- Notification Icon & Button -->
+            <div class="relative">
+                <button onclick="toggleNotifications()" class="w-9 h-9 rounded-full bg-cardbg neon-border flex items-center justify-center text-neonblue hover:scale-105 transition">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-neongreen rounded-full"></span>
+                </button>
+                <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-cardbg neon-border rounded-2xl p-3 shadow-2xl z-50 text-xs space-y-2">
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-1 font-bold">
+                        <span>Notifications</span>
+                        <button onclick="toggleNotifications()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="p-2 bg-darkbg rounded-xl border border-gray-800">
+                            <p class="font-bold text-neonblue">New user</p>
+                            <p class="text-[10px] text-gray-400">User started the bot for the first time</p>
+                            <span class="text-[9px] text-gray-500 block mt-1">Aug 8 14:18</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ================= VIEWS (TABS) ================= -->
+        <main class="flex-grow p-4">
+
+            <!-- TAB 1: HOME -->
+            <section id="tab-home" class="space-y-4 view-section">
+                <div>
+                    <h1 class="text-xl font-black">Hey <span id="home-username" class="text-neonblue">User</span></h1>
+                    <p class="text-xs text-gray-400">Let's keep earning</p>
+                </div>
+
+                <div class="p-5 rounded-2xl bg-gradient-to-br from-cardbg to-[#1a1c38] neon-border text-center space-y-1">
+                    <span class="text-xs text-gray-400 uppercase tracking-wider">Total Balance</span>
+                    <h2 class="text-3xl font-black text-neongreen" id="home-total-balance">$0.00</h2>
+                </div>
+
+                <div class="space-y-2">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Task Overview</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-cardbg p-3.5 rounded-xl neon-border flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Pending</span>
+                            <span class="font-bold text-yellow-400" id="stat-pending">0</span>
+                        </div>
+                        <div class="bg-cardbg p-3.5 rounded-xl neon-border flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Approved</span>
+                            <span class="font-bold text-neongreen" id="stat-approved">0</span>
+                        </div>
+                    </div>
+                    <div class="bg-cardbg p-3.5 rounded-xl neon-border flex justify-between items-center">
+                        <span class="text-xs text-gray-400">Rejected</span>
+                        <span class="font-bold text-red-400" id="stat-rejected">0</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-1">
+                    <button onclick="switchTab('profile')" class="p-3.5 rounded-xl bg-cardbg neon-border text-left hover:border-neonblue transition flex justify-between items-center group">
+                        <div>
+                            <span class="text-xs font-bold block">Withdraw</span>
+                            <span class="text-[10px] text-gray-400">Payout funds</span>
+                        </div>
+                        <i class="fa-solid fa-arrow-right text-neonblue group-hover:translate-x-1 transition-transform"></i>
+                    </button>
+                    <button onclick="switchTab('referrals')" class="p-3.5 rounded-xl bg-cardbg neon-border text-left hover:border-neongreen transition flex justify-between items-center group">
+                        <div>
+                            <span class="text-xs font-bold block">Referrals</span>
+                            <span class="text-[10px] text-gray-400">Invite & earn</span>
+                        </div>
+                        <i class="fa-solid fa-arrow-right text-neongreen group-hover:translate-x-1 transition-transform"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-2 pt-2">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Tasks</h3>
+                    <div onclick="openTaskDetails()" class="p-4 rounded-xl bg-cardbg neon-border flex justify-between items-center cursor-pointer hover:border-neonblue transition">
+                        <div class="space-y-0.5">
+                            <span class="text-[10px] text-neonblue font-semibold uppercase">Instagram task 2fa</span>
+                            <h4 class="font-bold text-xs">Create IG Account & Verify</h4>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-neongreen text-sm">0.042$</span>
+                            <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: TASK -->
+            <section id="tab-tasks" class="space-y-4 view-section hidden">
+                <h2 class="text-lg font-bold">Tasks</h2>
+                <div class="space-y-3">
+                    <div class="p-4 rounded-2xl bg-cardbg neon-border space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[10px] bg-neonblue/10 text-neonblue px-2 py-0.5 rounded-md font-semibold">Instagram task</span>
+                                <h3 class="font-bold text-sm mt-1">Instagram 2FA Task</h3>
+                            </div>
+                            <span class="text-xs font-bold text-neongreen">0.042$</span>
+                        </div>
+                        <p class="text-xs text-gray-400">Create a new Instagram account using the automatically generated credentials and submit your 2FA verification.</p>
+                        <button onclick="openTaskDetails()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-neonblue to-neongreen text-darkbg font-bold text-xs uppercase tracking-wider shadow-lg">
+                            View Task Details
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: REFERRALS -->
+            <section id="tab-referrals" class="space-y-4 view-section hidden">
+                <h2 class="text-lg font-bold">Referrals</h2>
+                <div class="p-4 rounded-2xl bg-cardbg neon-border space-y-3">
+                    <p class="text-xs text-gray-300 leading-relaxed">Invite friend and earn 20% of their tasks completion rewards</p>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-gray-400 mb-1">Your invite link</label>
+                        <div class="flex items-center space-x-2 bg-darkbg p-2 rounded-xl border border-gray-800">
+                            <input type="text" id="referral-link" readonly class="bg-transparent text-xs text-gray-300 w-full px-1 outline-none" value="https://t.me/Wwwearn_bot?start=ref_0000">
+                            <button onclick="copyReferralLink()" class="px-3 py-1.5 bg-neonblue text-darkbg font-bold text-xs rounded-lg whitespace-nowrap">Copy</button>
+                        </div>
+                    </div>
+                    <button onclick="shareOnTelegram()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-neonblue to-neongreen text-darkbg font-bold text-xs uppercase tracking-wider">
+                        Share on telegram
+                    </button>
+                </div>
+
+                <div class="space-y-2">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Referal statistics</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-cardbg p-3.5 rounded-xl neon-border">
+                            <span class="text-xs text-gray-400 block">Pending</span>
+                            <span class="text-base font-bold text-yellow-400" id="ref-pending">0</span>
+                        </div>
+                        <div class="bg-cardbg p-3.5 rounded-xl neon-border">
+                            <span class="text-xs text-gray-400 block">Friend active</span>
+                            <span class="text-base font-bold text-neongreen" id="ref-active">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-cardbg neon-border flex justify-between items-center cursor-pointer hover:border-neonblue transition">
+                    <div>
+                        <h4 class="font-bold text-xs">Leaderboard</h4>
+                        <p class="text-[10px] text-gray-400">View the referral leaderboard</p>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-neonblue"></i>
+                </div>
+            </section>
+
+            <!-- TAB 4: PROFILE -->
+            <section id="tab-profile" class="space-y-4 view-section hidden">
+                <h2 class="text-lg font-bold">Profile</h2>
+                <div class="p-4 rounded-2xl bg-cardbg neon-border space-y-3 text-xs">
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                        <span class="text-gray-400">Name</span>
+                        <span class="font-bold text-white" id="profile-name">User Name</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                        <span class="text-gray-400">User name</span>
+                        <span class="font-bold text-neonblue" id="profile-username">@username</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400">UID</span>
+                        <span class="font-mono text-gray-300" id="profile-uid">123456789</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-cardbg p-3.5 rounded-xl neon-border">
+                        <span class="text-[10px] text-gray-400 block">Current balance</span>
+                        <span class="text-base font-bold text-neongreen" id="profile-balance">$0.00</span>
+                    </div>
+                    <div class="bg-cardbg p-3.5 rounded-xl neon-border">
+                        <span class="text-[10px] text-gray-400 block">Life time earning</span>
+                        <span class="text-base font-bold text-neonblue" id="profile-lifetime">$0.00</span>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-cardbg neon-border space-y-3">
+                    <h3 class="font-bold text-sm">Withdraw funds</h3>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between text-gray-400">
+                            <span>Available balance:</span>
+                            <span class="text-neongreen font-bold" id="withdraw-available">$0.00</span>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-400 mb-1">Payment method</label>
+                            <input type="text" readonly value="USDT (BEP20)" class="w-full bg-darkbg neon-border rounded-xl px-3 py-2 text-xs text-white outline-none cursor-not-allowed">
+                        </div>
+                        <div class="text-[10px] text-gray-400">Mini withdraw 0.05$</div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-400 mb-1">Amount usd</label>
+                            <input type="number" step="0.01" id="withdraw-amount" placeholder="0.05" class="w-full bg-darkbg neon-border rounded-xl px-3 py-2 text-xs text-white outline-none">
+                        </div>
+                        <button onclick="handleWithdraw()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-neonblue to-neongreen text-darkbg font-bold text-xs uppercase tracking-wider mt-1">
+                            Confirm
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">My statistics</h3>
+                    <div class="bg-cardbg p-4 rounded-2xl neon-border space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Tasks Done</span>
+                            <span class="font-bold text-white" id="stat-total-tasks">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Referrals</span>
+                            <span class="font-bold text-white" id="stat-total-refs">0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- BOTTOM NAVIGATION BAR -->
+        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0f1020]/95 backdrop-blur border-t border-gray-800 flex justify-around items-center h-16 z-40 px-2">
+            <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-neonblue" data-target="home">
+                <i class="fa-solid fa-house text-base"></i>
+                <span class="text-[10px] mt-1 font-medium">Home</span>
+            </button>
+            <button onclick="switchTab('tasks')" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-gray-400 hover:text-neonblue transition" data-target="tasks">
+                <i class="fa-solid fa-list-check text-base"></i>
+                <span class="text-[10px] mt-1 font-medium">Task</span>
+            </button>
+            <button onclick="switchTab('referrals')" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-gray-400 hover:text-neonblue transition" data-target="referrals">
+                <i class="fa-solid fa-users text-base"></i>
+                <span class="text-[10px] mt-1 font-medium">Referrals</span>
+            </button>
+            <button onclick="switchTab('profile')" class="nav-btn flex flex-col items-center justify-center w-full py-1 text-gray-400 hover:text-neonblue transition" data-target="profile">
+                <i class="fa-solid fa-user text-base"></i>
+                <span class="text-[10px] mt-1 font-medium">Profile</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- TASK DETAILS & SUBMISSION MODAL -->
+    <div id="task-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-cardbg neon-border w-full max-w-sm rounded-3xl p-5 space-y-4 relative max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                <div class="flex items-center space-x-2">
+                    <span class="font-bold text-sm">Instagram 2FA Task</span>
+                </div>
+                <button onclick="closeTaskModal()" class="text-gray-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Reward Header Box -->
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-cardbg to-[#1a1c38] neon-border text-center">
+                <span class="text-[10px] text-gray-400 uppercase tracking-wider block">Reward</span>
+                <span class="text-xl font-black text-neongreen">$ 0.042</span>
+            </div>
+
+            <!-- Warning Box -->
+            <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[11px] text-red-300 leading-relaxed space-y-1">
+                <div class="font-bold flex items-center space-x-1">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>IMPORTANT:</span>
+                </div>
+                <p>Create the account using these automatically generated credentials. Copy and use them directly.</p>
+            </div>
+
+            <!-- Auto-Generated Assigned Credentials (Read-only with Copy) -->
+            <div class="space-y-3">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-neonblue tracking-wider block text-center">FULL NAME</label>
+                    <div class="flex items-center justify-between bg-darkbg p-2 rounded-xl border border-gray-800">
+                        <span id="task-assigned-name" class="text-xs font-semibold px-2 text-white">Generating...</span>
+                        <button onclick="copyText('task-assigned-name')" class="px-3 py-1 bg-neonpurple text-white text-[10px] font-bold rounded-lg hover:bg-neonpurple/80 transition">Copy</button>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-neonblue tracking-wider block text-center">USERNAME</label>
+                    <div class="flex items-center justify-between bg-darkbg p-2 rounded-xl border border-gray-800">
+                        <span id="task-assigned-username" class="text-xs font-semibold px-2 text-white">Generating...</span>
+                        <button onclick="copyText('task-assigned-username')" class="px-3 py-1 bg-neonpurple text-white text-[10px] font-bold rounded-lg hover:bg-neonpurple/80 transition">Copy</button>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-neonblue tracking-wider block text-center">PASSWORD</label>
+                    <div class="flex items-center justify-between bg-darkbg p-2 rounded-xl border border-gray-800">
+                        <span id="task-assigned-password" class="text-xs font-semibold px-2 text-white">Generating...</span>
+                        <button onclick="copyText('task-assigned-password')" class="px-3 py-1 bg-neonpurple text-white text-[10px] font-bold rounded-lg hover:bg-neonpurple/80 transition">Copy</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2FA Verification Form & Get Code Feature -->
+            <div class="space-y-3 pt-2 border-t border-gray-800">
+                <div class="space-y-1 text-center">
+                    <div class="flex items-center justify-center space-x-1 text-neonblue text-xs font-bold">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>2FA Verification</span>
+                    </div>
+                    <label class="text-[10px] text-gray-400 block tracking-wider">2FA SETUP KEY</label>
+                </div>
+                
+                <!-- Input for 2FA Secret Key -->
+                <div>
+                    <input type="text" id="sub-2fa-key" placeholder="Enter your 2fa secret key" class="w-full bg-darkbg neon-border rounded-xl px-3 py-2.5 text-xs text-white text-center outline-none">
+                </div>
+
+                <!-- Get Code Button & Generated Code Box -->
+                <div class="space-y-2">
+                    <button type="button" onclick="generate2FACode()" class="w-full py-2.5 rounded-xl bg-neonpurple text-white font-bold text-xs uppercase tracking-wider hover:bg-neonpurple/80 transition shadow-lg">
+                        <i class="fa-solid fa-key mr-1"></i> Get Code
+                    </button>
+                    
+                    <div id="generated-code-box" class="hidden flex items-center justify-between bg-darkbg p-2 rounded-xl border border-neongreen/40">
+                        <div class="text-center w-full">
+                            <span class="text-[10px] text-gray-400 block">Generated 6-Digit Code:</span>
+                            <span id="display-code" class="text-base font-black text-neongreen tracking-widest">------</span>
+                        </div>
+                        <button onclick="copyGeneratedCode()" class="px-3 py-1.5 bg-neongreen text-darkbg text-[10px] font-bold rounded-lg whitespace-nowrap">Copy</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Task Form -->
+            <form id="task-submission-form" onsubmit="handleTaskSubmit(event)" class="pt-1">
+                <button type="submit" id="submit-btn" class="w-full py-3 rounded-xl bg-cardbg neon-border text-neonblue font-bold text-xs uppercase tracking-wider hover:bg-neonblue hover:text-darkbg transition shadow-lg">
+                    Submit Task
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SUCCESS SCREEN MODAL -->
+    <div id="success-modal" class="fixed inset-0 bg-darkbg z-50 flex flex-col items-center justify-center p-6 text-center hidden">
+        <div class="w-16 h-16 rounded-full bg-neongreen/20 text-neongreen flex items-center justify-center text-3xl mb-4 neon-glow-green">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <h2 class="text-2xl font-black mb-1">Success!</h2>
+        <p class="text-xs text-gray-400 max-w-xs mb-6">Your task details have been successfully submitted! Please wait for admin verification.</p>
+        <button onclick="closeSuccessScreen()" class="w-full max-w-xs py-3 rounded-xl bg-cardbg neon-border text-neonblue font-bold text-xs uppercase tracking-wider">
+            Back to Tasks
+        </button>
+    </div>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        const SUPABASE_URL = 'https://uwmzexmzsfhroxznuayo.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3bXpleG16c2Zocm94em51YXlvIiwicm9sZSI6InVub24iLCJpYXQiOjE3ODYxNzg3MTMsImV4cCI6MjEwMTc1NDcxM30.uEWN7J-f6qLkF_nzd8NJ2GhGOTkXfdA0Oibmen20RTs';
+        
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUser = {
+            id: 'tg_' + Math.floor(Math.random() * 900000 + 100000),
+            name: 'Telegram User',
+            username: 'user_' + Math.floor(Math.random() * 9000 + 1000),
+            balance: 0.00,
+            lifetime: 0.00,
+            pending: 0,
+            approved: 0,
+            rejected: 0,
+            tasksDone: 0
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe?.user) {
+                const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+                currentUser.id = tgUser.id.toString();
+                currentUser.name = tgUser.first_name || currentUser.name;
+                currentUser.username = tgUser.username ? '@' + tgUser.username : currentUser.username;
+            }
+
+            document.getElementById('home-username').innerText = currentUser.name;
+            document.getElementById('profile-name').innerText = currentUser.name;
+            document.getElementById('profile-username').innerText = currentUser.username;
+            document.getElementById('profile-uid').innerText = currentUser.id;
+            document.getElementById('referral-link').value = `https://t.me/Wwwearn_bot?start=ref_${currentUser.id}`;
+
+            syncUserData();
+        });
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-neonblue');
+                btn.classList.add('text-gray-400');
+                if(btn.getAttribute('data-target') === tabId) {
+                    btn.classList.remove('text-gray-400');
+                    btn.classList.add('text-neonblue');
+                }
+            });
+        }
+
+        function toggleNotifications() {
+            document.getElementById('notif-dropdown').classList.toggle('hidden');
+        }
+
+        // Auto-generate credentials when opening task details
+        function openTaskDetails() {
+            generateRandomCredentials();
+            document.getElementById('task-modal').classList.remove('hidden');
+        }
+
+        function generateRandomCredentials() {
+            const firstNames = ["Liam", "Noah", "Oliver", "Elijah", "James", "William", "Benjamin", "Lucas", "Henry", "Alexander", "Mia", "Emma", "Sophia", "Olivia", "Ava"];
+            const lastNames = ["Smith", "Johnson", "Brown", "Taylor", "Miller", "Wilson", "Moore", "Anderson", "Thomas", "Jackson", "White", "Harris", "Martin"];
+            
+            const randomFirst = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const randomLast = lastNames[Math.floor(Math.random() * lastNames.length)];
+            const randomNum = Math.floor(Math.random() * 900 + 100);
+
+            const fullName = `${randomFirst} ${randomLast}`;
+            const username = `${randomFirst.toLowerCase()}_${randomLast.toLowerCase()}${randomNum}`;
+            const password = `${randomFirst.toLowerCase()}sec${Math.floor(Math.random() * 9000 + 1000)}@`;
+
+            document.getElementById('task-assigned-name').innerText = fullName;
+            document.getElementById('task-assigned-username').innerText = username;
+            document.getElementById('task-assigned-password').innerText = password;
+        }
+
+        function closeTaskModal() {
+            document.getElementById('task-modal').classList.add('hidden');
+        }
+        function closeSuccessScreen() {
+            document.getElementById('success-modal').classList.add('hidden');
+            switchTab('tasks');
+        }
+
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text);
+            alert('Copied to clipboard: ' + text);
+        }
+
+        // Generate 6-digit TOTP code using jsotp library
+        function generate2FACode() {
+            let secretKey = document.getElementById('sub-2fa-key').value.trim();
+            if (!secretKey) {
+                alert('Please enter the 2FA Setup Key first!');
+                return;
+            }
+
+            try {
+                secretKey = secretKey.replace(/\s+/g, '').toUpperCase();
+                const totp = window.jsotp.TOTP(secretKey);
+                const code = totp.now();
+
+                document.getElementById('display-code').innerText = code;
+                document.getElementById('generated-code-box').classList.remove('hidden');
+            } catch (err) {
+                alert('Invalid 2FA Secret Key format! Please check the key.');
+            }
+        }
+
+        function copyGeneratedCode() {
+            const code = document.getElementById('display-code').innerText;
+            if (code && code !== '------') {
+                navigator.clipboard.writeText(code);
+                alert('2FA Code copied: ' + code);
+            }
+        }
+
+        async function handleTaskSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const twoFaInput = document.getElementById('sub-2fa-key').value;
+
+            if (!twoFaInput) {
+                alert('Please provide the 2FA key or generated code before submitting!');
+                return;
+            }
+
+            btn.innerText = 'Submitting...';
+            btn.disabled = true;
+
+            const payload = {
+                user_id: currentUser.id,
+                full_name: document.getElementById('task-assigned-name').innerText,
+                username_submitted: document.getElementById('task-assigned-username').innerText,
+                password: document.getElementById('task-assigned-password').innerText,
+                two_fa_key: twoFaInput,
+                status: 'pending',
+                reward: 0.042,
+                created_at: new Date().toISOString()
+            };
+
+            try {
+                const { error } = await _supabase.from('task_submissions').insert([payload]);
+                if (error) throw error;
+
+                currentUser.pending += 1;
+                document.getElementById('stat-pending').innerText = currentUser.pending;
+
+                document.getElementById('sub-2fa-key').value = '';
+                document.getElementById('generated-code-box').classList.add('hidden');
+                closeTaskModal();
+                document.getElementById('success-modal').classList.remove('hidden');
+            } catch (err) {
+                alert('Error: ' + (err.message || 'Check database table columns.'));
+            } finally {
+                btn.innerText = 'Submit Task';
+                btn.disabled = false;
+            }
+        }
+
+        async function syncUserData() {
+            try {
+                const { data, error } = await _supabase
+                    .from('task_submissions')
+                    .select('*')
+                    .eq('user_id', currentUser.id);
+
+                if (!error && data) {
+                    currentUser.pending = data.filter(i => i.status === 'pending').length;
+                    currentUser.approved = data.filter(i => i.status === 'approved').length;
+                    currentUser.rejected = data.filter(i => i.status === 'rejected').length;
+                    currentUser.tasksDone = data.length;
+
+                    currentUser.balance = currentUser.approved * 0.042;
+                    currentUser.lifetime = currentUser.balance;
+
+                    document.getElementById('home-total-balance').innerText = '$' + currentUser.balance.toFixed(3);
+                    document.getElementById('profile-balance').innerText = '$' + currentUser.balance.toFixed(3);
+                    document.getElementById('withdraw-available').innerText = '$' + currentUser.balance.toFixed(3);
+                    document.getElementById('profile-lifetime').innerText = '$' + currentUser.lifetime.toFixed(3);
+                    document.getElementById('stat-pending').innerText = currentUser.pending;
+                    document.getElementById('stat-approved').innerText = currentUser.approved;
+                    document.getElementById('stat-rejected').innerText = currentUser.rejected;
+                    document.getElementById('stat-total-tasks').innerText = currentUser.tasksDone;
+                }
+            } catch (e) {
+                console.log('Offline mode');
+            }
+        }
+
+        function copyReferralLink() {
+            const input = document.getElementById('referral-link');
+            input.select();
+            navigator.clipboard.writeText(input.value);
+            alert('Referral link copied!');
+        }
+
+        function shareOnTelegram() {
+            const link = document.getElementById('referral-link').value;
+            const text = encodeURIComponent("Join @Wwwearn_bot and earn rewards with me!");
+            window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`, '_blank');
+        }
+
+        function handleWithdraw() {
+            const amount = parseFloat(document.getElementById('withdraw-amount').value);
+            if (isNaN(amount) || amount < 0.05) {
+                alert('Minimum withdraw amount is 0.05$');
+                return;
+            }
+            if (amount > currentUser.balance) {
+                alert('Insufficient available balance!');
+                return;
+            }
+            alert('Withdrawal request submitted successfully!');
+            document.getElementById('withdraw-amount').value = '';
+        }
+    </script>
+</body>
+</html>

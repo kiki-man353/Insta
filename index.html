@@ -394,9 +394,9 @@
         const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = {
-            id: '5967643083',
-            name: 'Telegram User',
-            username: '@BRTIP1',
+            id: '5862275310',
+            name: 'Admin',
+            username: '@Bergam777',
             balance: 0.00,
             lifetime: 0.00,
             pending: 0,
@@ -406,19 +406,23 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Check real Telegram WebApp user details dynamically
+            // Check real Telegram WebApp user details dynamically and override defaults completely
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready();
                 if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                     const tgUser = tg.initDataUnsafe.user;
-                    currentUser.id = tgUser.id.toString();
-                    currentUser.name = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
-                    currentUser.username = tgUser.username ? '@' + tgUser.username : '@user_' + tgUser.id.slice(-4);
+                    if (tgUser.id) currentUser.id = tgUser.id.toString();
+                    if (tgUser.first_name) {
+                        currentUser.name = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
+                    }
+                    if (tgUser.username) {
+                        currentUser.username = '@' + tgUser.username;
+                    }
                 }
             }
 
-            // Bind values to UI elements
+            // Bind values to UI elements dynamically
             document.getElementById('home-username').innerText = currentUser.name;
             document.getElementById('profile-name').innerText = currentUser.name;
             document.getElementById('profile-username').innerText = currentUser.username;

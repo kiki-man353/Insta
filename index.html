@@ -394,9 +394,9 @@
         const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = {
-            id: '5862275310',
-            name: 'Admin',
-            username: '@Bergam777',
+            id: '',
+            name: 'Telegram User',
+            username: '@username',
             balance: 0.00,
             lifetime: 0.00,
             pending: 0,
@@ -406,7 +406,7 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Check real Telegram WebApp user details dynamically and override defaults completely
+            // Automatically fetch dynamic user details from Telegram WebApp
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready();
@@ -420,6 +420,11 @@
                         currentUser.username = '@' + tgUser.username;
                     }
                 }
+            }
+
+            // Fallback if opened outside Telegram (e.g. browser testing)
+            if (!currentUser.id) {
+                currentUser.id = 'guest_' + Math.floor(Math.random() * 1000000);
             }
 
             // Bind values to UI elements dynamically

@@ -395,8 +395,8 @@
 
         let currentUser = {
             id: '5967643083',
-            name: '16 𝐵ℛ 🇩🇴',
-            username: '@BRTIP1',
+            name: 'Telegram User',
+            username: '@user_1498',
             balance: 0.00,
             lifetime: 0.00,
             pending: 0,
@@ -406,7 +406,7 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Check real Telegram WebApp user details
+            // Check real Telegram WebApp user details dynamically
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready();
@@ -414,7 +414,7 @@
                     const tgUser = tg.initDataUnsafe.user;
                     currentUser.id = tgUser.id.toString();
                     currentUser.name = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
-                    currentUser.username = tgUser.username ? '@' + tgUser.username : '@' + tgUser.id;
+                    currentUser.username = tgUser.username ? '@' + tgUser.username : '@user_' + tgUser.id.slice(-4);
                 }
             }
 

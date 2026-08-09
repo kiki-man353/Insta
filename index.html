@@ -8,7 +8,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.2.0/sha1.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsotp@1.0.6/lib/jsotp.min.js"></script>
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
@@ -400,7 +399,6 @@
                 currentUser.username = 'No Username';
             }
 
-            // Bind values to UI Elements (Home & Profile)
             document.getElementById('home-username').innerText = currentUser.name;
             document.getElementById('profile-name').innerText = currentUser.name;
             document.getElementById('profile-username').innerText = currentUser.username;
@@ -520,7 +518,66 @@
             alert('Copied to clipboard: ' + text);
         }
 
-        function generate2FACode() {
+        function base32tohex(base32) {
+            let base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+            let bits = "";
+            let hex = "";
+            
+            base32 = base32.replace(/=+$/, '').toUpperCase();
+            for (let i = 0; i < base32.length; i++) {
+                let val = base32chars.indexOf(base32.charAt(i));
+                if (val === -1) throw new Error("Invalid character in base32 string");
+                bits += val.toString(2).padStart(5, '0');
+            }
+            
+            for (let i = 0; i + 4 <= bits.length; i += 4) {
+                let chunk = bits.substr(i, 4);
+                hex += parseInt(chunk, 2).toString(16);
+            }
+            return hex;
+        }
+
+        function hexToBytes(hex) {
+            let bytes = new Uint8Array(hex.length / 2);
+            for (let c = 0; c < hex.length; c += 2) {
+                bytes[c / 2] = parseInt(hex.substr(c, 2), 16);
+            }
+            return bytes;
+        }
+
+        async function generateTOTPCode(secret, timeStep = 30, windowSize = 6) {
+            let cleanSecret = secret.replace(/[\s\-\=`'"]/g, '').toUpperCase();
+            let hexKey = base32tohex(cleanSecret);
+            let keyBytes = hexToBytes(hexKey);
+
+            let epoch = Math.floor(Date.now() / 1000);
+            let time = Math.floor(epoch / timeStep);
+            
+            let timeHex = time.toString(16).padStart(16, '0');
+            let timeBytes = hexToBytes(timeHex);
+
+            let cryptoKey = await window.crypto.subtle.importKey(
+                "raw",
+                keyBytes,
+                { name: "HMAC", hash: { name: "SHA-1" } },
+                false,
+                ["sign"]
+            );
+
+            let signature = await window.crypto.subtle.sign("HMAC", cryptoKey, timeBytes);
+            let hmacResult = new Uint8Array(signature);
+
+            let offset = hmacResult[hmacResult.length - 1] & 0x0f;
+            let binary = ((hmacResult[offset] & 0x7f) << 24) |
+                         ((hmacResult[offset + 1] & 0xff) << 16) |
+                         ((hmacResult[offset + 2] & 0xff) << 8) |
+                         (hmacResult[offset + 3] & 0xff);
+
+            let otp = binary % Math.pow(10, windowSize);
+            return otp.toString().padStart(windowSize, '0');
+        }
+
+        async function generate2FACode() {
             let secretKey = document.getElementById('sub-2fa-key').value.trim();
             if (!secretKey) {
                 alert('Please enter the 2FA Setup Key first!');
@@ -528,13 +585,11 @@
             }
 
             try {
-                secretKey = secretKey.replace(/\s+/g, '').toUpperCase();
-                const totp = window.jsotp.TOTP(secretKey);
-                const code = totp.now();
-
+                const code = await generateTOTPCode(secretKey);
                 document.getElementById('display-code').innerText = code;
                 document.getElementById('generated-code-box').classList.remove('hidden');
             } catch (err) {
+                console.error(err);
                 alert('Invalid 2FA Secret Key format! Please check the key.');
             }
         }
@@ -561,6 +616,7 @@
             btn.innerText = 'Submitting...';
             btn.disabled = true;
 
+            // 'full_name' የሚለውን ካሎም ወደ ቀጥታ ቴብልህ ስም አስተካክለነዋል
             const payload = {
                 user_id: currentUser.id,
                 full_name: document.getElementById('task-assigned-name').innerText,

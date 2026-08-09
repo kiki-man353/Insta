@@ -414,7 +414,6 @@
                 startParam = urlParams.get('start');
             }
 
-            // Ensure user exists in 'users' table and handle referral mapping
             if (!currentUser.id.startsWith('guest_')) {
                 const { data: existingUser } = await _supabase
                     .from('users')
@@ -440,13 +439,12 @@
                     }]);
 
                     if (invitedByVal) {
-                        // Insert into referrals table safely
-                        await _supabase.from('referrals').upsert([{
+                        await _supabase.from('referrals').insert([{
                             referrer_id: invitedByVal,
-                            referred_id: currentUser.id
-                        }], { onConflict: 'referred_id' });
+                            referred_id: currentUser.id,
+                            status: 'pending'
+                        }]);
 
-                        // Increment referrer's invite_count safely
                         const { data: refUser } = await _supabase
                             .from('users')
                             .select('invite_count')
@@ -464,10 +462,11 @@
                         .update({ invited_by: invitedByVal })
                         .eq('id', currentUser.id);
 
-                    await _supabase.from('referrals').upsert([{
+                    await _supabase.from('referrals').insert([{
                         referrer_id: invitedByVal,
-                        referred_id: currentUser.id
-                    }], { onConflict: 'referred_id' });
+                        referred_id: currentUser.id,
+                        status: 'pending'
+                    }]);
 
                     const { data: refUser } = await _supabase
                         .from('users')
@@ -768,7 +767,6 @@
                     currentUser.rejected = data.filter(i => i.status === 'rejected').length;
                     currentUser.tasksDone = data.length;
 
-                    // Calculate task earnings plus referral earnings (20% logic handled via backend/admin or calculation)
                     const taskEarnings = data.filter(i => i.status === 'approved').reduce((acc, curr) => acc + (parseFloat(curr.reward) || 0.042), 0);
                     
                     const { data: dbUser } = await _supabase
@@ -830,7 +828,7 @@
                 alert('Error submitting withdrawal: ' + error.message);
             } else {
                 alert('Withdrawal request submitted successfully!');
-                document.getElementById('withdraw-amount').value = code = '';
+                document.getElementById('withdraw-amount').value = '';
                 syncUserData();
             }
         }

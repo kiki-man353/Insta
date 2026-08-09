@@ -218,6 +218,10 @@
                             <label class="block text-[11px] font-semibold text-gray-400 mb-1">Payment method</label>
                             <input type="text" readonly value="USDT (BEP20)" class="w-full bg-darkbg neon-border rounded-xl px-3 py-2 text-xs text-white outline-none cursor-not-allowed">
                         </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-400 mb-1">USDT BEP20 Wallet Address</label>
+                            <input type="text" id="withdraw-address" placeholder="Enter your 0x... address" class="w-full bg-darkbg neon-border rounded-xl px-3 py-2 text-xs text-white outline-none">
+                        </div>
                         <div class="text-[10px] text-gray-400">Mini withdraw 0.05$</div>
                         <div>
                             <label class="block text-[11px] font-semibold text-gray-400 mb-1">Amount usd</label>
@@ -776,8 +780,20 @@
                         .single();
 
                     currentUser.referralEarnings = dbUser ? (parseFloat(dbUser.referral_earnings) || 0) : 0;
-                    currentUser.balance = taskEarnings + currentUser.referralEarnings;
-                    currentUser.lifetime = currentUser.balance;
+                    
+                    // Withdraw የተደረገውን ሂሳብ ከዳታቤዝ በማምጣት ከባላንስ ላይ እንቀንሰዋለን
+                    const { data: withdrawData } = await _supabase
+                        .from('withdraw_requests')
+                        .select('amount')
+                        .eq('user_id', currentUser.id.toString());
+
+                    let totalWithdrawn = 0;
+                    if (withdrawData) {
+                        totalWithdrawn = withdrawData.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
+                    }
+
+                    currentUser.lifetime = taskEarnings + currentUser.referralEarnings;
+                    currentUser.balance = Math.max(0, currentUser.lifetime - totalWithdrawn);
 
                     document.getElementById('home-total-balance').innerText = '$' + currentUser.balance.toFixed(3);
                     document.getElementById('profile-balance').innerText = '$' + currentUser.balance.toFixed(3);
@@ -806,7 +822,13 @@
         }
 
         async function handleWithdraw() {
+            const address = document.getElementById('withdraw-address').value.trim();
             const amount = parseFloat(document.getElementById('withdraw-amount').value);
+
+            if (!address) {
+                alert('Please enter your USDT BEP20 wallet address!');
+                return;
+            }
             if (isNaN(amount) || amount < 0.05) {
                 alert('Minimum withdraw amount is 0.05$');
                 return;
@@ -820,7 +842,7 @@
                 user_id: currentUser.id.toString(),
                 amount: amount,
                 payment_method: 'USDT (BEP20)',
-                account_info: currentUser.username,
+                account_info: address,
                 status: 'pending'
             }]);
 
@@ -829,7 +851,8 @@
             } else {
                 alert('Withdrawal request submitted successfully!');
                 document.getElementById('withdraw-amount').value = '';
-                syncUserData();
+                document.getElementById('withdraw-address').value = '';
+                await syncUserData();
             }
         }
     </script>

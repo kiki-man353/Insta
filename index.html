@@ -150,11 +150,11 @@
             <section id="tab-referrals" class="space-y-4 view-section hidden">
                 <h2 class="text-lg font-bold">Referrals</h2>
                 <div class="p-4 rounded-2xl bg-cardbg neon-border space-y-3">
-                    <p class="text-xs text-gray-300 leading-relaxed">Invite friend and earn 20% of their tasks completion rewards</p>
+                    <p class="text-xs text-gray-300 leading-relaxed">Invite friend and earn rewards from their activities</p>
                     <div>
                         <label class="block text-[11px] font-semibold text-gray-400 mb-1">Your invite link</label>
                         <div class="flex items-center space-x-2 bg-darkbg p-2 rounded-xl border border-gray-800">
-                            <input type="text" id="referral-link" readonly class="bg-transparent text-xs text-gray-300 w-full px-1 outline-none" value="https://t.me/Wwwearn_bot?start=ref_0000">
+                            <input type="text" id="referral-link" readonly class="bg-transparent text-xs text-gray-300 w-full px-1 outline-none" value="https://t.me/Wwwearn_bot?start=0000">
                             <button onclick="copyReferralLink()" class="px-3 py-1.5 bg-neonblue text-darkbg font-bold text-xs rounded-lg whitespace-nowrap">Copy</button>
                         </div>
                     </div>
@@ -164,10 +164,10 @@
                 </div>
 
                 <div class="space-y-2">
-                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Referal statistics</h3>
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Referral statistics</h3>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="bg-cardbg p-3.5 rounded-xl neon-border">
-                            <span class="text-xs text-gray-400 block">Pending</span>
+                            <span class="text-xs text-gray-400 block">Total Invited</span>
                             <span class="text-base font-bold text-yellow-400" id="ref-pending">0</span>
                         </div>
                         <div class="bg-cardbg p-3.5 rounded-xl neon-border">
@@ -366,10 +366,11 @@
             pending: 0,
             approved: 0,
             rejected: 0,
-            tasksDone: 0
+            tasksDone: 0,
+            referralsCount: 0
         };
 
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             const tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
@@ -403,15 +404,50 @@
             document.getElementById('profile-name').innerText = currentUser.name;
             document.getElementById('profile-username').innerText = currentUser.username;
             document.getElementById('profile-uid').innerText = currentUser.id;
-            document.getElementById('referral-link').value = `https://t.me/Wwwearn_bot?start=ref_${currentUser.id}`;
+            
+            // ሊንኩ ልክ እንደ ጠየቅከው በቀጥታ ?start=UID ቅርጸት ተዘጋጀ
+            document.getElementById('referral-link').value = `https://t.me/Wwwearn_bot?start=${currentUser.id}`;
+
+            // ሪፈራል መረጃን ማጣራት (Start parameter መኖሩን ማየት)
+            let startParam = tg.initDataUnsafe && tg.initDataUnsafe.start_param ? tg.initDataUnsafe.start_param : null;
+            if(!startParam) {
+                const urlParams = new URLSearchParams(window.location.search);
+                startParam = urlParams.get('start');
+            }
+
+            if (startParam && startParam !== currentUser.id && !currentUser.id.startsWith('guest_')) {
+                // በሌላ ሰው ሊንክ ገብቷል - ዳታቤዝ ላይ መመዝገብ
+                await _supabase.from('referrals').insert([{
+                    referrer_id: startParam,
+                    referred_id: currentUser.id
+                }]).select(); // duplicate ከቀጠለ ችግር እንዳይፈጥር
+            }
             
             const now = new Date();
             const timeString = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             document.getElementById('notif-time').innerText = timeString;
 
-            syncUserData();
+            await syncUserData();
+            await loadReferralStats();
             loadPlatformTasks();
         });
+
+        async function loadReferralStats() {
+            try {
+                const { data, error } = await _supabase
+                    .from('referrals')
+                    .select('*')
+                    .eq('referrer_id', currentUser.id);
+
+                if (!error && data) {
+                    currentUser.referralsCount = data.length;
+                    document.getElementById('ref-pending').innerText = currentUser.referralsCount;
+                    document.getElementById('ref-active').innerText = currentUser.referralsCount;
+                }
+            } catch (e) {
+                console.log('Referral load error', e);
+            }
+        }
 
         async function loadPlatformTasks() {
             const homeContainer = document.getElementById('home-active-tasks-container');
@@ -616,7 +652,6 @@
             btn.innerText = 'Submitting...';
             btn.disabled = true;
 
-            // 'full_name' የሚለውን ካሎም ወደ ቀጥታ ቴብልህ ስም አስተካክለነዋል
             const payload = {
                 user_id: currentUser.id,
                 full_name: document.getElementById('task-assigned-name').innerText,
@@ -689,17 +724,31 @@
             window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`, '_blank');
         }
 
-        function handleWithdraw() {
+        async function handleWithdraw() {
             const amount = parseFloat(document.getElementById('withdraw-amount').value);
-            if (isNaN(amount) || amount.toFixed(2) < 0.05) {
+            if (isNaN(amount) || amount < 0.05) {
                 alert('Minimum withdraw amount is 0.05$');
                 return;
             }
             if (amount > currentUser.balance) {
                 alert('Insufficient available balance!');
+                return;
+            }
+
+            const { error } = await _supabase.from('withdraw_requests').insert([{
+                user_id: currentUser.id,
+                amount: amount,
+                payment_method: 'USDT (BEP20)',
+                account_info: currentUser.username,
+                status: 'pending'
+            }]);
+
+            if (error) {
+                alert('Error submitting withdrawal: ' + error.message);
             } else {
                 alert('Withdrawal request submitted successfully!');
                 document.getElementById('withdraw-amount').value = '';
+                syncUserData();
             }
         }
     </script>

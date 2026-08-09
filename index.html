@@ -150,7 +150,7 @@
             <section id="tab-referrals" class="space-y-4 view-section hidden">
                 <h2 class="text-lg font-bold">Referrals</h2>
                 <div class="p-4 rounded-2xl bg-cardbg neon-border space-y-3">
-                    <p class="text-xs text-gray-300 leading-relaxed">Invite friend and earn rewards from their activities</p>
+                    <p class="text-xs text-gray-300 leading-relaxed font-semibold text-neonblue">Invite friends and earn 20% of their tasks completion rewards</p>
                     <div>
                         <label class="block text-[11px] font-semibold text-gray-400 mb-1">Your invite link</label>
                         <div class="flex items-center space-x-2 bg-darkbg p-2 rounded-xl border border-gray-800">
@@ -405,10 +405,8 @@
             document.getElementById('profile-username').innerText = currentUser.username;
             document.getElementById('profile-uid').innerText = currentUser.id;
             
-            // ሊንኩ ልክ እንደ ጠየቅከው በቀጥታ ?start=UID ቅርጸት ተዘጋጀ
             document.getElementById('referral-link').value = `https://t.me/Wwwearn_bot?start=${currentUser.id}`;
 
-            // ሪፈራል መረጃን ማጣራት (Start parameter መኖሩን ማየት)
             let startParam = tg.initDataUnsafe && tg.initDataUnsafe.start_param ? tg.initDataUnsafe.start_param : null;
             if(!startParam) {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -416,11 +414,10 @@
             }
 
             if (startParam && startParam !== currentUser.id && !currentUser.id.startsWith('guest_')) {
-                // በሌላ ሰው ሊንክ ገብቷል - ዳታቤዝ ላይ መመዝገብ
                 await _supabase.from('referrals').insert([{
                     referrer_id: startParam,
                     referred_id: currentUser.id
-                }]).select(); // duplicate ከቀጠለ ችግር እንዳይፈጥር
+                }]).select(); 
             }
             
             const now = new Date();
@@ -720,7 +717,7 @@
 
         function shareOnTelegram() {
             const link = document.getElementById('referral-link').value;
-            const text = encodeURIComponent("Join @Wwwearn_bot and earn rewards with me!");
+            const text = encodeURIComponent("Invite friends and earn 20% of their tasks completion rewards!");
             window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`, '_blank');
         }
 

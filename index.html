@@ -367,7 +367,8 @@
             approved: 0,
             rejected: 0,
             tasksDone: 0,
-            referralsCount: 0
+            referralsCount: 0,
+            referralEarnings: 0
         };
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -413,11 +414,73 @@
                 startParam = urlParams.get('start');
             }
 
-            if (startParam && startParam !== currentUser.id && !currentUser.id.startsWith('guest_')) {
-                await _supabase.from('referrals').insert([{
-                    referrer_id: startParam,
-                    referred_id: currentUser.id
-                }]).select(); 
+            // Ensure user exists in 'users' table and handle referral mapping
+            if (!currentUser.id.startsWith('guest_')) {
+                const { data: existingUser } = await _supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+
+                let invitedByVal = null;
+                if (startParam && startParam !== currentUser.id) {
+                    invitedByVal = startParam.toString();
+                } else if (existingUser && existingUser.invited_by) {
+                    invitedByVal = existingUser.invited_by;
+                }
+
+                if (!existingUser) {
+                    await _supabase.from('users').insert([{
+                        id: currentUser.id,
+                        full_name: currentUser.name,
+                        username: currentUser.username,
+                        invited_by: invitedByVal,
+                        invite_count: 0,
+                        referral_earnings: 0
+                    }]);
+
+                    if (invitedByVal) {
+                        // Insert into referrals table safely
+                        await _supabase.from('referrals').upsert([{
+                            referrer_id: invitedByVal,
+                            referred_id: currentUser.id
+                        }], { onConflict: 'referred_id' });
+
+                        // Increment referrer's invite_count safely
+                        const { data: refUser } = await _supabase
+                            .from('users')
+                            .select('invite_count')
+                            .eq('id', invitedByVal)
+                            .single();
+                        
+                        if (refUser) {
+                            await _supabase.from('users')
+                                .update({ invite_count: (refUser.invite_count || 0) + 1 })
+                                .eq('id', invitedByVal);
+                        }
+                    }
+                } else if (invitedByVal && !existingUser.invited_by) {
+                    await _supabase.from('users')
+                        .update({ invited_by: invitedByVal })
+                        .eq('id', currentUser.id);
+
+                    await _supabase.from('referrals').upsert([{
+                        referrer_id: invitedByVal,
+                        referred_id: currentUser.id
+                    }], { onConflict: 'referred_id' });
+
+                    const { data: refUser } = await _supabase
+                        .from('users')
+                        .select('invite_count')
+                        .eq('id', invitedByVal)
+                        .single();
+                    
+                    if (refUser) {
+                        await _supabase.from('users')
+                            .update({ invite_count: (refUser.invite_count || 0) + 1 })
+                            .eq('id', invitedByVal);
+                    }
+                }
             }
             
             const now = new Date();
@@ -431,15 +494,28 @@
 
         async function loadReferralStats() {
             try {
-                const { data, error } = await _supabase
-                    .from('referrals')
-                    .select('*')
-                    .eq('referrer_id', currentUser.id);
+                const { data: dbUser } = await _supabase
+                    .from('users')
+                    .select('invite_count, referral_earnings')
+                    .eq('id', currentUser.id)
+                    .single();
 
-                if (!error && data) {
-                    currentUser.referralsCount = data.length;
+                if (dbUser) {
+                    currentUser.referralsCount = dbUser.invite_count || 0;
+                    currentUser.referralEarnings = parseFloat(dbUser.referral_earnings) || 0;
                     document.getElementById('ref-pending').innerText = currentUser.referralsCount;
                     document.getElementById('ref-active').innerText = currentUser.referralsCount;
+                } else {
+                    const { data } = await _supabase
+                        .from('referrals')
+                        .select('*')
+                        .eq('referrer_id', currentUser.id);
+
+                    if (data) {
+                        currentUser.referralsCount = data.length;
+                        document.getElementById('ref-pending').innerText = currentUser.referralsCount;
+                        document.getElementById('ref-active').innerText = currentUser.referralsCount;
+                    }
                 }
             } catch (e) {
                 console.log('Referral load error', e);
@@ -650,7 +726,7 @@
             btn.disabled = true;
 
             const payload = {
-                user_id: currentUser.id,
+                user_id: currentUser.id.toString(),
                 full_name: document.getElementById('task-assigned-name').innerText,
                 username_submitted: document.getElementById('task-assigned-username').innerText,
                 password: document.getElementById('task-assigned-password').innerText,
@@ -684,7 +760,7 @@
                 const { data, error } = await _supabase
                     .from('task_submissions')
                     .select('*')
-                    .eq('user_id', currentUser.id);
+                    .eq('user_id', currentUser.id.toString());
 
                 if (!error && data) {
                     currentUser.pending = data.filter(i => i.status === 'pending').length;
@@ -692,7 +768,17 @@
                     currentUser.rejected = data.filter(i => i.status === 'rejected').length;
                     currentUser.tasksDone = data.length;
 
-                    currentUser.balance = data.filter(i => i.status === 'approved').reduce((acc, curr) => acc + (parseFloat(curr.reward) || 0.042), 0);
+                    // Calculate task earnings plus referral earnings (20% logic handled via backend/admin or calculation)
+                    const taskEarnings = data.filter(i => i.status === 'approved').reduce((acc, curr) => acc + (parseFloat(curr.reward) || 0.042), 0);
+                    
+                    const { data: dbUser } = await _supabase
+                        .from('users')
+                        .select('referral_earnings')
+                        .eq('id', currentUser.id.toString())
+                        .single();
+
+                    currentUser.referralEarnings = dbUser ? (parseFloat(dbUser.referral_earnings) || 0) : 0;
+                    currentUser.balance = taskEarnings + currentUser.referralEarnings;
                     currentUser.lifetime = currentUser.balance;
 
                     document.getElementById('home-total-balance').innerText = '$' + currentUser.balance.toFixed(3);
@@ -704,7 +790,7 @@
                     document.getElementById('stat-rejected').innerText = currentUser.rejected;
                 }
             } catch (e) {
-                console.log('Offline mode');
+                console.log('Offline mode', e);
             }
         }
 
@@ -733,7 +819,7 @@
             }
 
             const { error } = await _supabase.from('withdraw_requests').insert([{
-                user_id: currentUser.id,
+                user_id: currentUser.id.toString(),
                 amount: amount,
                 payment_method: 'USDT (BEP20)',
                 account_info: currentUser.username,
@@ -744,7 +830,7 @@
                 alert('Error submitting withdrawal: ' + error.message);
             } else {
                 alert('Withdrawal request submitted successfully!');
-                document.getElementById('withdraw-amount').value = '';
+                document.getElementById('withdraw-amount').value = code = '';
                 syncUserData();
             }
         }

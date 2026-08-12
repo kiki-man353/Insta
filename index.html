@@ -152,7 +152,7 @@
                         <span class="text-xs font-bold text-neongreen">$0.01</span>
                     </div>
                     <p class="text-xs text-gray-400">Join our official Telegram community to get instant rewards. Stay joined for 5 seconds to claim!</p>
-                    <button onclick="openJoinTaskModal()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-neonblue to-neongreen text-darkbg font-bold text-xs uppercase tracking-wider shadow-lg">
+                    <button id="daily-task-btn" onclick="openJoinTaskModal()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-neonblue to-neongreen text-darkbg font-bold text-xs uppercase tracking-wider shadow-lg transition">
                         Start Daily Task
                     </button>
                 </div>
@@ -411,7 +411,8 @@
             rejected: 0,
             tasksDone: 0,
             referralsCount: 0,
-            referralEarnings: 0
+            referralEarnings: 0,
+            hasJoinedCommunity: false
         };
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -528,9 +529,30 @@
             document.getElementById('notif-time').innerText = timeString;
 
             await syncUserData();
+            await checkDailyJoinStatus();
             await loadReferralStats();
             loadPlatformTasks();
         });
+
+        async function checkDailyJoinStatus() {
+            try {
+                const { data, error } = await _supabase
+                    .from('task_submissions')
+                    .select('*')
+                    .eq('user_id', currentUser.id.toString())
+                    .eq('full_name', 'Daily Join Community');
+
+                if (!error && data && data.length > 0) {
+                    currentUser.hasJoinedCommunity = true;
+                    const btn = document.getElementById('daily-task-btn');
+                    btn.disabled = true;
+                    btn.innerText = "Completed ✓";
+                    btn.className = "w-full py-2.5 rounded-xl bg-gray-800 text-gray-400 font-bold text-xs uppercase tracking-wider cursor-not-allowed";
+                }
+            } catch (e) {
+                console.log('Error checking join status', e);
+            }
+        }
 
         async function loadReferralStats() {
             try {
@@ -632,6 +654,10 @@
 
         // --- JOIN COMMUNITY TASK LOGIC ---
         function openJoinTaskModal() {
+            if (currentUser.hasJoinedCommunity) {
+                alert('You have already completed this task!');
+                return;
+            }
             document.getElementById('join-task-modal').classList.remove('hidden');
             const claimBtn = document.getElementById('claim-join-btn');
             claimBtn.disabled = true;
@@ -667,7 +693,6 @@
             claimBtn.innerText = "Claiming...";
 
             try {
-                // Save reward directly as approved task or referral earnings
                 const payload = {
                     user_id: currentUser.id.toString(),
                     full_name: 'Daily Join Community',
@@ -681,6 +706,12 @@
 
                 const { error } = await _supabase.from('task_submissions').insert([payload]);
                 if (error) throw error;
+
+                currentUser.hasJoinedCommunity = true;
+                const taskBtn = document.getElementById('daily-task-btn');
+                taskBtn.disabled = true;
+                taskBtn.innerText = "Completed ✓";
+                taskBtn.className = "w-full py-2.5 rounded-xl bg-gray-800 text-gray-400 font-bold text-xs uppercase tracking-wider cursor-not-allowed";
 
                 closeJoinTaskModal();
                 document.getElementById('success-msg').innerText = "Successfully claimed 0.01$ for joining community!";

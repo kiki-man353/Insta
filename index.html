@@ -141,6 +141,22 @@
                     <h2 class="text-lg font-bold">Tasks</h2>
                     <button onclick="loadPlatformTasks()" class="text-xs text-neonblue"><i class="fa-solid fa-rotate mr-1"></i> Refresh</button>
                 </div>
+                
+                <!-- DAILY JOIN COMMUNITY TASK CARD -->
+                <div class="p-4 rounded-2xl bg-cardbg neon-border space-y-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[10px] bg-neongreen/10 text-neongreen px-2 py-0.5 rounded-md font-semibold">DAILY TASK</span>
+                            <h3 class="font-bold text-sm mt-1">Join Community</h3>
+                        </div>
+                        <span class="text-xs font-bold text-neongreen">$0.01</span>
+                    </div>
+                    <p class="text-xs text-gray-400">Join our official Telegram community to get instant rewards. Stay joined for 5 seconds to claim!</p>
+                    <button onclick="openJoinTaskModal()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-neonblue to-neongreen text-darkbg font-bold text-xs uppercase tracking-wider shadow-lg">
+                        Start Daily Task
+                    </button>
+                </div>
+
                 <div id="tasks-page-container" class="space-y-3">
                     <p class="text-xs text-gray-500 text-center py-6">Loading available tasks...</p>
                 </div>
@@ -251,6 +267,36 @@
 
     </div>
 
+    <!-- JOIN COMMUNITY TASK MODAL WITH 5s TIMER -->
+    <div id="join-task-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-cardbg neon-border w-full max-w-sm rounded-3xl p-5 space-y-4 relative">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                <span class="font-bold text-sm text-neonblue">Join Community Task</span>
+                <button onclick="closeJoinTaskModal()" class="text-gray-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-cardbg to-[#1a1c38] neon-border text-center space-y-1">
+                <span class="text-[10px] text-gray-400 uppercase tracking-wider">Reward</span>
+                <span class="text-xl font-black text-neongreen">$0.01</span>
+            </div>
+
+            <p class="text-xs text-gray-300 text-center leading-relaxed">
+                1. Click the button below to join our Telegram community.<br>
+                2. Stay for at least 5 seconds, then come back to claim your reward!
+            </p>
+
+            <div class="space-y-2 pt-2">
+                <a href="https://t.me/wwearnoffice" target="_blank" onclick="startJoinTimer()" class="block w-full py-3 rounded-xl bg-cardbg neon-border text-neonblue font-bold text-xs uppercase tracking-wider text-center hover:bg-neonblue hover:text-darkbg transition">
+                    <i class="fa-brands fa-telegram mr-1"></i> 1. Join Community
+                </a>
+
+                <button id="claim-join-btn" disabled onclick="claimJoinReward()" class="w-full py-3 rounded-xl bg-gray-700 text-gray-400 font-bold text-xs uppercase tracking-wider cursor-not-allowed transition">
+                    2. Please Wait (5s)
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- TASK MODAL -->
     <div id="task-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-cardbg neon-border w-full max-w-sm rounded-3xl p-5 space-y-4 relative max-h-[90vh] overflow-y-auto">
@@ -340,7 +386,7 @@
             <i class="fa-solid fa-check"></i>
         </div>
         <h2 class="text-2xl font-black mb-1">Success!</h2>
-        <p class="text-xs text-gray-400 max-w-xs mb-6">Your task details have been successfully submitted! Please wait for admin verification.</p>
+        <p class="text-xs text-gray-400 max-w-xs mb-6" id="success-msg">Your task details have been successfully submitted! Please wait for admin verification.</p>
         <button onclick="closeSuccessScreen()" class="w-full max-w-xs py-3 rounded-xl bg-cardbg neon-border text-neonblue font-bold text-xs uppercase tracking-wider">
             Back to Tasks
         </button>
@@ -584,6 +630,70 @@
             document.getElementById('notif-dropdown').classList.toggle('hidden');
         }
 
+        // --- JOIN COMMUNITY TASK LOGIC ---
+        function openJoinTaskModal() {
+            document.getElementById('join-task-modal').classList.remove('hidden');
+            const claimBtn = document.getElementById('claim-join-btn');
+            claimBtn.disabled = true;
+            claimBtn.className = "w-full py-3 rounded-xl bg-gray-700 text-gray-400 font-bold text-xs uppercase tracking-wider cursor-not-allowed transition";
+            claimBtn.innerText = "2. Please Wait (5s)";
+        }
+
+        function closeJoinTaskModal() {
+            document.getElementById('join-task-modal').classList.add('hidden');
+        }
+
+        function startJoinTimer() {
+            const claimBtn = document.getElementById('claim-join-btn');
+            let timeLeft = 5;
+            claimBtn.innerText = `Please Wait (${timeLeft}s)`;
+            
+            const timer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft > 0) {
+                    claimBtn.innerText = `Please Wait (${timeLeft}s)`;
+                } else {
+                    clearInterval(timer);
+                    claimBtn.disabled = false;
+                    claimBtn.className = "w-full py-3 rounded-xl bg-gradient-to-r from-neonblue to-neongreen text-darkbg font-bold text-xs uppercase tracking-wider shadow-lg transition hover:opacity-90";
+                    claimBtn.innerText = "2. Claim Reward ($0.01)";
+                }
+            }, 1000);
+        }
+
+        async function claimJoinReward() {
+            const claimBtn = document.getElementById('claim-join-btn');
+            claimBtn.disabled = true;
+            claimBtn.innerText = "Claiming...";
+
+            try {
+                // Save reward directly as approved task or referral earnings
+                const payload = {
+                    user_id: currentUser.id.toString(),
+                    full_name: 'Daily Join Community',
+                    username_submitted: '@wwearnoffice',
+                    password: 'N/A',
+                    two_fa_key: 'N/A',
+                    status: 'approved',
+                    reward: 0.01,
+                    created_at: new Date().toISOString()
+                };
+
+                const { error } = await _supabase.from('task_submissions').insert([payload]);
+                if (error) throw error;
+
+                closeJoinTaskModal();
+                document.getElementById('success-msg').innerText = "Successfully claimed 0.01$ for joining community!";
+                document.getElementById('success-modal').classList.remove('hidden');
+                await syncUserData();
+            } catch (err) {
+                alert('Error claiming reward: ' + (err.message || 'Please try again.'));
+                claimBtn.disabled = false;
+                claimBtn.innerText = "2. Claim Reward ($0.01)";
+            }
+        }
+        // ---------------------------------
+
         function openTaskDetails(title, description, reward) {
             document.getElementById('modal-task-title').innerText = title;
             document.getElementById('modal-task-desc').innerText = description;
@@ -740,6 +850,7 @@
                 document.getElementById('sub-2fa-key').value = '';
                 document.getElementById('generated-code-box').classList.add('hidden');
                 closeTaskModal();
+                document.getElementById('success-msg').innerText = "Your task details have been successfully submitted! Please wait for admin verification.";
                 document.getElementById('success-modal').classList.remove('hidden');
             } catch (err) {
                 alert('Error: ' + (err.message || 'Check database table columns.'));

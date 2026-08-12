@@ -150,7 +150,7 @@
             <section id="tab-referrals" class="space-y-4 view-section hidden">
                 <h2 class="text-lg font-bold">Referrals</h2>
                 <div class="p-4 rounded-2xl bg-cardbg neon-border space-y-3 text-center">
-                    <p class="text-xs text-gray-300 leading-relaxed font-semibold text-neonblue">Invite friends and earn 20% of their tasks completion rewards</p>
+                    <p class="text-sm font-black text-neongreen tracking-wide">1 invite = 0.01$</p>
                     <button onclick="openTelegramBot()" class="w-full py-3 rounded-xl bg-gradient-to-r from-neonblue to-neongreen text-darkbg font-bold text-xs uppercase tracking-wider shadow-lg">
                         <i class="fa-brands fa-telegram mr-1 text-sm"></i> Go to Telegram Bot
                     </button>
@@ -801,8 +801,11 @@
         function openTelegramBot() {
             const botUsername = "Wwwearn_bot";
             const botUrl = `https://t.me/${botUsername}?start=${currentUser.id}`;
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-                window.Telegram.WebApp.openTelegramLink(botUrl);
+            const tg = window.Telegram?.WebApp;
+            
+            if (tg && tg.openTelegramLink) {
+                tg.openTelegramLink(botUrl);
+                tg.close(); // Mini App-ን ይዘጋል
             } else {
                 window.open(botUrl, '_blank');
             }

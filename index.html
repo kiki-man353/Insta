@@ -532,6 +532,9 @@
             await checkDailyJoinStatus();
             await loadReferralStats();
             loadPlatformTasks();
+
+            // Check if there was an active task stored in localStorage (when returning from Instagram/other app)
+            restoreActiveTaskState();
         });
 
         async function checkDailyJoinStatus() {
@@ -736,6 +739,20 @@
         }
 
         function generateRandomCredentials() {
+            // Check if credentials already exist in localStorage for persistence
+            const savedName = localStorage.getItem('active_task_name');
+            const savedUsername = localStorage.getItem('active_task_username');
+            const savedPassword = localStorage.getItem('active_task_password');
+            const savedTitle = localStorage.getItem('active_task_title');
+            const currentTitle = document.getElementById('modal-task-title').innerText;
+
+            if (savedName && savedUsername && savedPassword && savedTitle === currentTitle) {
+                document.getElementById('task-assigned-name').innerText = savedName;
+                document.getElementById('task-assigned-username').innerText = savedUsername;
+                document.getElementById('task-assigned-password').innerText = savedPassword;
+                return;
+            }
+
             const firstNames = ["Liam", "Noah", "Oliver", "Elijah", "James", "William", "Benjamin", "Lucas", "Henry", "Alexander", "Mia", "Emma", "Sophia", "Olivia", "Ava"];
             const lastNames = ["Smith", "Johnson", "Brown", "Taylor", "Miller", "Wilson", "Moore", "Anderson", "Thomas", "Jackson", "White", "Harris", "Martin"];
             
@@ -743,14 +760,42 @@
             const randomLast = lastNames[Math.floor(Math.random() * lastNames.length)];
             const randomNum = Math.floor(Math.random() * 900 + 100);
 
-            document.getElementById('task-assigned-name').innerText = `${randomFirst} ${randomLast}`;
-            document.getElementById('task-assigned-username').innerText = `${randomFirst.toLowerCase()}_${randomLast.toLowerCase()}${randomNum}`;
-            document.getElementById('task-assigned-password').innerText = `${randomFirst.toLowerCase()}sec${Math.floor(Math.random() * 9000 + 1000)}@`;
+            const name = `${randomFirst} ${randomLast}`;
+            const username = `${randomFirst.toLowerCase()}_${randomLast.toLowerCase()}${randomNum}`;
+            const password = `${randomFirst.toLowerCase()}sec${Math.floor(Math.random() * 9000 + 1000)}@`;
+
+            document.getElementById('task-assigned-name').innerText = name;
+            document.getElementById('task-assigned-username').innerText = username;
+            document.getElementById('task-assigned-password').innerText = password;
+
+            // Save to localStorage so it persists if app reloads
+            localStorage.setItem('active_task_name', name);
+            localStorage.setItem('active_task_username', username);
+            localStorage.setItem('active_task_password', password);
+            localStorage.setItem('active_task_title', currentTitle);
+        }
+
+        function restoreActiveTaskState() {
+            const savedName = localStorage.getItem('active_task_name');
+            if (savedName) {
+                // If there was an active task session before page reload, restore modal view
+                document.getElementById('task-assigned-name').innerText = savedName;
+                document.getElementById('task-assigned-username').innerText = localStorage.getItem('active_task_username') || '';
+                document.getElementById('task-assigned-password').innerText = localStorage.getItem('active_task_password') || '';
+                document.getElementById('modal-task-title').innerText = localStorage.getItem('active_task_title') || 'Task Details';
+                document.getElementById('task-modal').classList.remove('hidden');
+            }
         }
 
         function closeTaskModal() {
             document.getElementById('task-modal').classList.add('hidden');
+            // Clear saved task data upon closing/submitting
+            localStorage.removeItem('active_task_name');
+            localStorage.removeItem('active_task_username');
+            localStorage.removeItem('active_task_password');
+            localStorage.removeItem('active_task_title');
         }
+
         function closeSuccessScreen() {
             document.getElementById('success-modal').classList.add('hidden');
             switchTab('tasks');

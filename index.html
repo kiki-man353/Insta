@@ -860,15 +860,11 @@
             btn.innerText = 'Submitting...';
             btn.disabled = true;
 
-            const assignedName = document.getElementById('task-assigned-name').innerText;
-            const assignedUsername = document.getElementById('task-assigned-username').innerText;
-            const assignedPassword = document.getElementById('task-assigned-password').innerText;
-
             const payload = {
                 user_id: currentUser.id.toString(),
-                full_name: assignedName,
-                username_submitted: assignedUsername,
-                password: assignedPassword,
+                full_name: document.getElementById('task-assigned-name').innerText,
+                username_submitted: document.getElementById('task-assigned-username').innerText,
+                password: document.getElementById('task-assigned-password').innerText,
                 two_fa_key: twoFaInput,
                 status: 'pending',
                 reward: rewardVal,
@@ -876,30 +872,8 @@
             };
 
             try {
-                // 1. Save to Supabase Database
                 const { error } = await _supabase.from('task_submissions').insert([payload]);
                 if (error) throw error;
-
-                // 2. Send Details to Telegram Channel (የቦት ቶከን በአስተማማኝ ሁኔታ ከ Backend/Server API ወይም Environment Variable እንዲነበብ ይደረጋል)
-                const chatId = "-1004399480886";
-                
-                const messageText = `🚀 **New Task Submission!**\n\n` +
-                                    `👤 **User ID:** \`${currentUser.id}\`\n` +
-                                    `📛 **Name:** ${assignedName}\n` +
-                                    `📧 **Username:** \`${assignedUsername}\`\n` +
-                                    `🔑 **Password:** \`${assignedPassword}\`\n` +
-                                    `🔐 **2FA Key:** \`${twoFaInput}\`\n` +
-                                    `💰 **Reward:** $${rewardVal}`;
-
-                // ማሳሰቢያ፡ የቦት ቶከን በቀጥታ እዚህ እንዳይጻፍ በ Server-side (Backend API) በኩል ጥያቄውን መላክ ይመረጣል።
-                await fetch('/api/send-telegram', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: chatId,
-                        text: messageText
-                    })
-                });
 
                 currentUser.pending += 1;
                 document.getElementById('stat-pending').innerText = currentUser.pending;
@@ -910,7 +884,7 @@
                 document.getElementById('success-msg').innerText = "Your task details have been successfully submitted! Please wait for admin verification.";
                 document.getElementById('success-modal').classList.remove('hidden');
             } catch (err) {
-                alert('Error: ' + (err.message || 'Check database table columns or network.'));
+                alert('Error: ' + (err.message || 'Check database table columns.'));
             } finally {
                 btn.innerText = 'Submit Task';
                 btn.disabled = false;
